@@ -1,4 +1,4 @@
-# 🐟 FishNet: Clasificación de Especies Ícticas mediante CNN y Grad-CAM
+# FishNet: Clasificación de Especies Ícticas mediante CNN y Grad-CAM
 
 [![Python](https://img.shields.io/badge/Python-3.9-blue)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-%E2%89%A52.0.0-orange)](https://pytorch.org/)
@@ -9,7 +9,7 @@ Sistema de visión por computador que clasifica automáticamente imágenes de pe
 
 ---
 
-## 📋 Tabla de Contenidos
+## Tabla de Contenidos
 
 - [Descripción del Proyecto](#descripción-del-proyecto)
 - [Dataset](#dataset)
@@ -38,7 +38,7 @@ El sistema fue desarrollado como proyecto final de la asignatura **Redes Neurona
 
 ## Dataset
 
-El dataset proviene del repositorio [FishNet](https://github.com/vc-2026-i/proyecto-2x1/tree/main), utilizando la subdivisión `mini_dataset` generada a partir del *Fish Dataset* original.
+El dataset proviene de Kaggle: [A Large Scale Fish Dataset](https://www.kaggle.com/datasets/sripaadsrinivasan/a-large-scale-fish-dataset), utilizando la subdivisión `mini_dataset` generada a partir del dataset original.
 
 | Parámetro | Valor |
 |---|---|
@@ -321,13 +321,28 @@ pip install -r requirements.txt
 
 ### 3. Descargar el dataset
 
-El dataset `mini_dataset` está disponible en el repositorio. Si no está incluido por tamaño, descárgalo desde:
+El dataset proviene de Kaggle: [A Large Scale Fish Dataset](https://www.kaggle.com/datasets/sripaadsrinivasan/a-large-scale-fish-dataset).
 
-```
-https://github.com/vc-2026-i/proyecto-2x1/tree/main
+**Opción 1 — Kaggle API (recomendado):**
+
+```bash
+# Instalar la API de Kaggle si no la tienes
+pip install kaggle
+
+# Asegúrate de tener tu token en ~/.kaggle/kaggle.json
+kaggle datasets download sripaadsrinivasan/a-large-scale-fish-dataset
+
+# Extraer en la ruta correcta
+unzip a-large-scale-fish-dataset.zip -d data/raw/fish_dataset/
 ```
 
-Colócalo en `data/mini_dataset/` con subdirectorios por clase. Luego ajusta la variable `data_dir` en el notebook a una ruta relativa:
+**Opción 2 — Descarga manual:**
+
+1. Accede a [kaggle.com/datasets/sripaadsrinivasan/a-large-scale-fish-dataset](https://www.kaggle.com/datasets/sripaadsrinivasan/a-large-scale-fish-dataset)
+2. Descarga el archivo ZIP
+3. Extrae el contenido en `data/raw/fish_dataset/`
+
+Una vez descargado, el `mini_dataset` utilizado en este proyecto se encuentra dentro del dataset original. Ajusta la variable `data_dir` en el notebook a la ruta correspondiente:
 
 ```python
 data_dir = Path('data/mini_dataset')
@@ -368,7 +383,7 @@ Ver `requirements.txt` para la lista completa con versiones exactas.
 
 ## Referencias
 
-1. FishNet, "Fish classification dataset and baseline models," 2026. [GitHub](https://github.com/vc-2026-i/proyecto-2x1/tree/main)
+1. Sripaad Srinivasan, "A Large Scale Fish Dataset," Kaggle, 2020. [Dataset](https://www.kaggle.com/datasets/sripaadsrinivasan/a-large-scale-fish-dataset)
 2. R. R. Selvaraju et al., "Grad-CAM: Visual explanations from deep networks via gradient-based localization," *Proc. IEEE ICCV*, 2017, pp. 618–626.
 3. I. Goodfellow, Y. Bengio y A. Courville, *Deep Learning*. MIT Press, 2016.
 
