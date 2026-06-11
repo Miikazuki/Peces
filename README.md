@@ -5,7 +5,7 @@
 [![Accuracy](https://img.shields.io/badge/Test%20Accuracy-98.67%25-brightgreen)]()
 [![License](https://img.shields.io/badge/License-MIT-lightgrey)]()
 
-Sistema de visión por computador que clasifica automáticamente imágenes de peces en diez especies usando una red neuronal convolucional (SimpleCNN), con explicaciones visuales mediante mapas de activación **Grad-CAM**. Incluye una interfaz gráfica en Tkinter para usuarios sin formación técnica.
+Sistema de visión por computador que clasifica automáticamente imágenes de peces en diez especies usando una red neuronal convolucional (SimpleCNN), con explicaciones visuales mediante mapas de activación **Grad-CAM**.
 
 ---
 
@@ -16,10 +16,9 @@ Sistema de visión por computador que clasifica automáticamente imágenes de pe
 - [Arquitectura del Pipeline](#arquitectura-del-pipeline)
 - [Modelo](#modelo)
 - [Resultados](#resultados)
+- [Grad-CAM: Explicabilidad Visual](#grad-cam-explicabilidad-visual)
 - [Estructura del Repositorio](#estructura-del-repositorio)
 - [Instalación y Uso](#instalación-y-uso)
-- [Interfaz Gráfica](#interfaz-gráfica)
-- [Grad-CAM: Explicabilidad Visual](#grad-cam-explicabilidad-visual)
 - [Dependencias](#dependencias)
 - [Autores](#autores)
 
@@ -84,37 +83,38 @@ El sistema se estructura en **cinco etapas modulares**, cada una implementada co
 Imagen de entrada
       │
       ▼
-┌─────────────┐
-│ 1. Adquisición     │  pipeline/adquisicion.py
-│ (archivo o random) │
-└──────┬──────┘
-       │  PIL.Image RGB
-       ▼
-┌─────────────┐
-│ 2. Preprocesamiento│  pipeline/preprocesamiento.py
-│ Resize 224×224     │
-│ Normalize ImageNet │
-└──────┬──────┘
-       │  Tensor (1,3,224,224)
-       ▼
-┌─────────────────────┐
-│ 3. Extracción Grad-CAM │  pipeline/extraccion_caracteristicas.py
-│ Forward + gradientes    │
-│ Heatmap 224×224         │
-└──────┬──────────────┘
-       │
-       ▼
-┌─────────────┐
-│ 4. Clasificación   │  pipeline/clasificacion.py
-│ SimpleCNN + Softmax│
-└──────┬──────┘
-       │  clase, confianza, probabilidades
-       ▼
-┌────────────────────┐
-│ 5. Postprocesamiento│  pipeline/postprocesamiento.py
-│ Overlay Grad-CAM    │
-│ Visualización       │
-└────────────────────┘
+┌──────────────────────┐
+│ 1. Adquisición       │  pipeline/adquisicion.py
+│ (archivo o random)   │
+└──────────┬───────────┘
+           │  PIL.Image RGB
+           ▼
+┌──────────────────────┐
+│ 2. Preprocesamiento  │  pipeline/preprocesamiento.py
+│ Resize 224×224       │
+│ Normalize ImageNet   │
+└──────────┬───────────┘
+           │  Tensor (1,3,224,224)
+           ▼
+┌──────────────────────┐
+│ 3. Extracción        │  pipeline/extraccion_caracteristicas.py
+│    Grad-CAM          │
+│ Forward + gradientes │
+│ Heatmap 224×224      │
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│ 4. Clasificación     │  pipeline/clasificacion.py
+│ SimpleCNN + Softmax  │
+└──────────┬───────────┘
+           │  clase, confianza, probabilidades
+           ▼
+┌──────────────────────┐
+│ 5. Postprocesamiento │  pipeline/postprocesamiento.py
+│ Overlay Grad-CAM     │
+│ Visualización        │
+└──────────────────────┘
 ```
 
 ### Preprocesamiento
@@ -123,7 +123,7 @@ Imagen de entrada
 - Normalización por canal con parámetros ImageNet: `µ = [0.485, 0.456, 0.406]`, `σ = [0.229, 0.224, 0.225]`.
 - Augmentación en entrenamiento: `RandomHorizontalFlip` y `RandomVerticalFlip` (p = 0.5).
 
-### Grad-CAM (Etapa 3 + 5)
+### Grad-CAM (Etapas 3 y 5)
 
 El mapa de activación se calcula sobre la última capa `Conv2d`:
 
@@ -131,7 +131,7 @@ El mapa de activación se calcula sobre la última capa `Conv2d`:
 L^c = ReLU( Σ_k α^c_k · A^k )
 ```
 
-Donde `α^c_k` es el promedio espacial del gradiente de la clase predicha respecto a los mapas de activación `A^k`. El heatmap se colorea con `jet` y se superpone a la imagen original con opacidad `α = 0.4`.
+Donde `α^c_k` es el promedio espacial del gradiente de la clase predicha respecto a los mapas de activación `A^k`. El heatmap resultante se colorea con `jet` y se superpone a la imagen original con opacidad `α = 0.4`.
 
 ---
 
@@ -139,7 +139,7 @@ Donde `α^c_k` es el promedio espacial del gradiente de la clase predicha respec
 
 ### SimpleCNN
 
-CNN diseñada a medida, con ~200 K parámetros, optimizada para el tamaño del dataset:
+CNN diseñada a medida con ~200 K parámetros, optimizada para el tamaño del dataset:
 
 | Capa | Detalle |
 |---|---|
@@ -196,11 +196,79 @@ CNN diseñada a medida, con ~200 K parámetros, optimizada para el tamaño del d
 | Striped Red Mullet | 1.00 | 1.00 | 1.00 | 11 |
 | Trout | 1.00 | 1.00 | 1.00 | 9 |
 
+### Matriz de Confusión
+
+![Matriz de Confusión](assets/confusion_matrix.png)
+
+La matriz confirma que 8 de 10 clases se clasifican perfectamente. Los únicos errores se concentran en **Sea Bass** (1 muestra confundida con Gilt-Head Bream), lo que es consistente con la similitud morfológica de ambas especies: cuerpo ovalado y comprimido lateralmente.
+
+### Curvas ROC
+
+![Curvas ROC](assets/roc_curves.png)
+
+9 de 10 clases alcanzan AUC = 1.000. Gilt-Head Bream obtiene AUC = 0.998, confirmando que incluso las clases más difíciles son separadas con alta confianza por el modelo.
+
 ### Análisis de errores
 
-Los errores se concentran en **Gilt-Head Bream** (precisión 0.86) y **Sea Bass** (recall 0.75). Ambas especies comparten cuerpo ovalado y comprimido lateralmente. Posibles mejoras: aumento de datos específico para este par, o añadir características morfológicas más finas.
+Los errores se concentran en **Gilt-Head Bream** (precisión 0.86) y **Sea Bass** (recall 0.75), dos especies que comparten cuerpo ovalado y comprimido lateralmente. Posibles mejoras: aumento de datos específico para este par o inclusión de características morfológicas más finas.
 
-Los mapas Grad-CAM confirman que el modelo se enfoca en regiones biológicamente relevantes: **contorno del cuerpo, cabeza y aletas**, lo que acerca el comportamiento de la red al razonamiento de un especialista humano.
+---
+
+## Grad-CAM: Explicabilidad Visual
+
+Grad-CAM (*Gradient-weighted Class Activation Mapping*, Selvaraju et al., ICCV 2017) genera un mapa de calor que indica qué regiones de la imagen fueron más determinantes para la predicción. En FishNet, el modelo destaca de forma consistente regiones biológicamente relevantes: **contorno del cuerpo, cabeza y aletas**.
+
+### Ejemplos de predicciones correctas con alta confianza
+
+**Red Mullet** — confianza 76.95%
+
+![Grad-CAM Red Mullet](assets/gradcam_red_mullet.png)
+
+El modelo concentra la activación en el contorno y la textura del cuerpo, capturando la coloración rojiza característica de la especie.
+
+---
+
+**Black Sea Sprat** — confianza 58.12%
+
+![Grad-CAM Black Sea Sprat](assets/gradcam_black_sea_sprat.png)
+
+La activación sigue el perfil longitudinal del pez, con énfasis en la línea lateral y el contorno dorsal.
+
+---
+
+**Astrolebpus** — confianza 55.24%
+
+![Grad-CAM Astrolebpus 1](assets/gradcam_astrolebpus_1.png)
+
+El heatmap resalta la estructura corporal alargada y las aletas pectorales, rasgos distintivos del género.
+
+---
+
+### Ejemplos adicionales
+
+**Black Sea Sprat** — confianza 33.16%
+
+![Grad-CAM Black Sea Sprat 2](assets/gradcam_black_sea_sprat_2.png)
+
+Caso de baja confianza: la activación es más dispersa, lo que indica mayor incertidumbre en la predicción. El modelo aún identifica correctamente la especie, pero señala la necesidad de más datos para este tipo de imágenes.
+
+---
+
+**Astrolebpus** — confianza 73.30%
+
+![Grad-CAM Astrolebpus 2](assets/gradcam_astrolebpus_2.png)
+
+---
+
+**Striped Red Mullet** — confianza 28.37%
+
+![Grad-CAM Striped Red Mullet](assets/gradcam_striped_red_mullet.png)
+
+La activación intensa sobre el cuerpo completo sugiere que el modelo usa la morfología global para discriminar esta especie de otras similares como Red Mullet.
+
+---
+
+Los mapas Grad-CAM validan que el modelo aprende representaciones biológicamente significativas y no artefactos del fondo, lo que acerca el comportamiento de la red al razonamiento de un especialista humano.
 
 ---
 
@@ -208,8 +276,12 @@ Los mapas Grad-CAM confirman que el modelo se enfoca en regiones biológicamente
 
 ```
 FishNet/
+├── assets/                    # Imágenes para el README
+│   ├── confusion_matrix.png
+│   ├── roc_curves.png
+│   └── gradcam_*.png
 ├── data/
-│   └── mini_dataset/          # Dataset por clase (ver instrucciones de descarga)
+│   └── mini_dataset/          # Dataset por clase
 │       ├── Astrolebpus/
 │       ├── Black Sea Sprat/
 │       └── ...
@@ -219,8 +291,6 @@ FishNet/
 │   ├── extraccion_caracteristicas.py  # Etapa 3: Grad-CAM
 │   ├── clasificacion.py       # Etapa 4: inferencia SimpleCNN
 │   └── postprocesamiento.py   # Etapa 5: visualización overlay
-├── gui/
-│   └── app.py                 # Interfaz gráfica Tkinter
 ├── models/
 │   └── fish_classification_model.pt  # Pesos entrenados
 ├── test1.ipynb                # Notebook completo reproducible
@@ -257,50 +327,19 @@ El dataset `mini_dataset` está disponible en el repositorio. Si no está inclui
 https://github.com/vc-2026-i/proyecto-2x1/tree/main
 ```
 
-Colócalo en `data/mini_dataset/` con subdirectorios por clase.
+Colócalo en `data/mini_dataset/` con subdirectorios por clase. Luego ajusta la variable `data_dir` en el notebook a una ruta relativa:
 
-### 4. Ejecutar el notebook (entrenamiento completo)
+```python
+data_dir = Path('data/mini_dataset')
+```
+
+### 4. Ejecutar el notebook
 
 ```bash
 jupyter notebook test1.ipynb
 ```
 
 El notebook cubre en orden: carga de datos → preprocesamiento → definición del modelo → entrenamiento con early stopping → evaluación (accuracy, classification report, matriz de confusión, curvas ROC) → visualización Grad-CAM.
-
-### 5. Ejecutar la interfaz gráfica
-
-```bash
-python gui/app.py
-```
-
----
-
-## Interfaz Gráfica
-
-La GUI en **Tkinter** permite a usuarios sin formación técnica operar el sistema completo:
-
-| Componente | Función |
-|---|---|
-| Panel superior | Cargar imagen desde archivo, seleccionar imagen aleatoria del dataset, ejecutar pipeline |
-| Panel central | Vista previa de la imagen cargada |
-| Panel de resultados | Clase predicha y confianza (verde > 50 %, rojo ≤ 50 %) |
-| Botón Grad-CAM | Abre ventana con tres paneles: imagen original, heatmap, superposición |
-| Botón Probabilidades | Tabla completa de probabilidades por clase |
-
-**Flujo de uso típico:**
-1. Cargar imagen → 2. Ejecutar pipeline → 3. Ver resultado → 4. Inspeccionar Grad-CAM
-
----
-
-## Grad-CAM: Explicabilidad Visual
-
-Grad-CAM (*Gradient-weighted Class Activation Mapping*, Selvaraju et al., ICCV 2017) genera un mapa de calor que indica qué píxeles de la imagen fueron más relevantes para la predicción. En FishNet, el modelo consistentemente destaca:
-
-- **Contorno del cuerpo** — forma general de la especie
-- **Cabeza** — rasgos faciales y dentición
-- **Aletas** — morfología característica por especie
-
-Esto valida que el modelo aprende representaciones biológicamente significativas en lugar de artefactos del fondo.
 
 ---
 
@@ -340,9 +379,11 @@ Ver `requirements.txt` para la lista completa con versiones exactas.
 **Luis Daniel Reyes Rodríguez**  
 Ingeniería Mecatrónica — Universidad Nacional de Colombia Sede La Paz  
 lureyesr@unal.edu.co
+
 **Jean Carlos Mejia Jimenez**  
 Ingeniería Mecatrónica — Universidad Nacional de Colombia Sede La Paz  
 jemejiaj@unal.edu.co
+
 ---
 
 *Proyecto final — Asignatura: Redes Neuronales y Aprendizaje Profundo*  
