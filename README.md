@@ -340,7 +340,6 @@ Ver `requirements.txt` para la lista completa con versiones exactas.
 **Luis Daniel Reyes Rodríguez**  
 Ingeniería Mecatrónica — Universidad Nacional de Colombia Sede La Paz  
 lureyesr@unal.edu.co
-
 **Jean Carlos Mejia Jimenez**  
 Ingeniería Mecatrónica — Universidad Nacional de Colombia Sede La Paz  
 jemejiaj@unal.edu.co
