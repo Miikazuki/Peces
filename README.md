@@ -32,7 +32,7 @@ La identificación manual de especies de peces por parte de ictiólogos es un pr
 2. Clasifica la especie usando una CNN ligera entrenada desde cero en PyTorch.
 3. Genera mapas de activación Grad-CAM para explicar visualmente las predicciones, señalando las regiones morfológicas (cabeza, aletas, contorno) que más influyeron en la decisión del modelo.
 
-El sistema fue desarrollado como proyecto final de la asignatura **Redes Neuronales y Aprendizaje Profundo** de la Universidad Nacional de Colombia Sede La Paz, y se presentó en el congreso de ictiología celebrado en la sede el 28 de mayo de 2026.
+El sistema fue desarrollado como proyecto final de la asignatura **Redes Neuronales y Aprendizaje Profundo** de la Universidad Nacional de Colombia Sede La Paz.
 
 ---
 
