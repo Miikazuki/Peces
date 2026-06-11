@@ -1,216 +1,350 @@
-# FishNet: Sistema de Deteccion y Clasificacion de Peces en Imagenes
+# 🐟 FishNet: Clasificación de Especies Ícticas mediante CNN y Grad-CAM
 
-**Mediante Redes Neuronales Convolucionales**
+[![Python](https://img.shields.io/badge/Python-3.9-blue)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-%E2%89%A52.0.0-orange)](https://pytorch.org/)
+[![Accuracy](https://img.shields.io/badge/Test%20Accuracy-98.67%25-brightgreen)]()
+[![License](https://img.shields.io/badge/License-MIT-lightgrey)]()
 
----
-
-## 1. Resumen
-
-FishNet es un sistema de vision por computadora para la identificacion automatica de
-especies de peces a partir de imagenes estaticas. Utiliza tres arquitecturas de redes
-neuronales convolucionales (CNN) —una personalizada desde cero, MobileNetV2 y ResNet50
-con transfer learning— para clasificar 9 especies de peces del Mar Egeo.
-
-El proyecto compara el rendimiento de estas arquitecturas usando metricas cuantitativas
-estandar e incorpora visualizaciones Grad-CAM para interpretabilidad.
+Sistema de visión por computador que clasifica automáticamente imágenes de peces en diez especies usando una red neuronal convolucional (SimpleCNN), con explicaciones visuales mediante mapas de activación **Grad-CAM**. Incluye una interfaz gráfica en Tkinter para usuarios sin formación técnica.
 
 ---
 
-## 2. Problema y Motivacion
+## 📋 Tabla de Contenidos
 
-La identificacion manual de especies de peces es:
-- **Lenta:** Requiere inspeccion visual experta de cada muestra.
-- **Subjetiva:** Depende de la experiencia del observador.
-- **Caro:** Necesita biólogos marinos especializados.
-
-Un sistema automatizado permite:
-- Monitoreo a gran escala de ecosistemas acuaticos.
-- Apoyo a la pesca sostenible mediante identificacion rapida de capturas.
-- Investigacion ecologica con datos consistentes y reproducibles.
+- [Descripción del Proyecto](#descripción-del-proyecto)
+- [Dataset](#dataset)
+- [Arquitectura del Pipeline](#arquitectura-del-pipeline)
+- [Modelo](#modelo)
+- [Resultados](#resultados)
+- [Estructura del Repositorio](#estructura-del-repositorio)
+- [Instalación y Uso](#instalación-y-uso)
+- [Interfaz Gráfica](#interfaz-gráfica)
+- [Grad-CAM: Explicabilidad Visual](#grad-cam-explicabilidad-visual)
+- [Dependencias](#dependencias)
+- [Autores](#autores)
 
 ---
 
-## 3. Dataset
+## Descripción del Proyecto
 
-**Fuente:** [A Large Scale Fish Dataset - Kaggle](https://www.kaggle.com/datasets/sripaadsrinivasan/a-large-scale-fish-dataset)
+La identificación manual de especies de peces por parte de ictiólogos es un proceso lento, costoso y difícil de escalar. **FishNet** automatiza esta tarea mediante un pipeline modular de visión por computador que:
 
-| Caracteristica | Descripcion |
+1. Carga y preprocesa imágenes de peces.
+2. Clasifica la especie usando una CNN ligera entrenada desde cero en PyTorch.
+3. Genera mapas de activación Grad-CAM para explicar visualmente las predicciones, señalando las regiones morfológicas (cabeza, aletas, contorno) que más influyeron en la decisión del modelo.
+
+El sistema fue desarrollado como proyecto final de la asignatura **Redes Neuronales y Aprendizaje Profundo** de la Universidad Nacional de Colombia Sede La Paz, y se presentó en el congreso de ictiología celebrado en la sede el 28 de mayo de 2026.
+
+---
+
+## Dataset
+
+El dataset proviene del repositorio [FishNet](https://github.com/vc-2026-i/proyecto-2x1/tree/main), utilizando la subdivisión `mini_dataset` generada a partir del *Fish Dataset* original.
+
+| Parámetro | Valor |
 |---|---|
-| **Especies** | 9 especies del Mar Egeo |
-| **Imagenes** | ~9000 (1000 aumentadas por clase) |
-| **Formato** | JPEG, resolucion variable |
-| **Clases** | Dorada, Lubina, Trucha artica, Pargo, Salmonete, Caballa, Anchoa, Jurel, Bacaladilla |
+| Total de imágenes | 1 500 |
+| Clases | 10 especies |
+| Imágenes por clase | 150 |
+| Formato | PNG / JPEG |
+| Condiciones de captura | Laboratorio controlado |
+
+**Especies incluidas:**
+
+| # | Especie |
+|---|---|
+| 1 | Astrolebpus |
+| 2 | Black Sea Sprat |
+| 3 | Gilt-Head Bream |
+| 4 | Hourse Mackerel |
+| 5 | Red Mullet |
+| 6 | Red Sea Bream |
+| 7 | Sea Bass |
+| 8 | Shrimp |
+| 9 | Striped Red Mullet |
+| 10 | Trout |
+
+**Partición de datos** (muestreo estratificado):
+
+| Conjunto | Imágenes | Porcentaje |
+|---|---|---|
+| Entrenamiento | 1 275 | 85 % |
+| Validación | 150 | 10 % |
+| Prueba | 75 | 5 % |
+
+Los datos se ubican en `data/mini_dataset/` organizados en subdirectorios por clase. Ver [instrucciones de descarga](#instalación-y-uso).
+
+---
+
+## Arquitectura del Pipeline
+
+El sistema se estructura en **cinco etapas modulares**, cada una implementada como un módulo Python independiente en `pipeline/`:
+
+```
+Imagen de entrada
+      │
+      ▼
+┌─────────────┐
+│ 1. Adquisición     │  pipeline/adquisicion.py
+│ (archivo o random) │
+└──────┬──────┘
+       │  PIL.Image RGB
+       ▼
+┌─────────────┐
+│ 2. Preprocesamiento│  pipeline/preprocesamiento.py
+│ Resize 224×224     │
+│ Normalize ImageNet │
+└──────┬──────┘
+       │  Tensor (1,3,224,224)
+       ▼
+┌─────────────────────┐
+│ 3. Extracción Grad-CAM │  pipeline/extraccion_caracteristicas.py
+│ Forward + gradientes    │
+│ Heatmap 224×224         │
+└──────┬──────────────┘
+       │
+       ▼
+┌─────────────┐
+│ 4. Clasificación   │  pipeline/clasificacion.py
+│ SimpleCNN + Softmax│
+└──────┬──────┘
+       │  clase, confianza, probabilidades
+       ▼
+┌────────────────────┐
+│ 5. Postprocesamiento│  pipeline/postprocesamiento.py
+│ Overlay Grad-CAM    │
+│ Visualización       │
+└────────────────────┘
+```
 
 ### Preprocesamiento
 
-- Redimension a 224x224 px
-- Normalizacion [0, 1]
-- Data augmentation (train): rotacion ±30°, volteo horizontal, zoom 0.8-1.2x, desplazamiento, brillo
-- Division: 70% train / 15% val / 15% test
+- Redimensionamiento a **224 × 224** píxeles.
+- Normalización por canal con parámetros ImageNet: `µ = [0.485, 0.456, 0.406]`, `σ = [0.229, 0.224, 0.225]`.
+- Augmentación en entrenamiento: `RandomHorizontalFlip` y `RandomVerticalFlip` (p = 0.5).
+
+### Grad-CAM (Etapa 3 + 5)
+
+El mapa de activación se calcula sobre la última capa `Conv2d`:
+
+```
+L^c = ReLU( Σ_k α^c_k · A^k )
+```
+
+Donde `α^c_k` es el promedio espacial del gradiente de la clase predicha respecto a los mapas de activación `A^k`. El heatmap se colorea con `jet` y se superpone a la imagen original con opacidad `α = 0.4`.
 
 ---
 
-## 4. Arquitecturas Implementadas
+## Modelo
 
-### 4.1 CNN Personalizada (Baseline)
+### SimpleCNN
 
-```
-Input(224x224x3)
-  -> Conv2D(32, 3x3) + ReLU + BN + MaxPooling
-  -> Conv2D(64, 3x3) + ReLU + BN + MaxPooling
-  -> Conv2D(128, 3x3) + ReLU + BN + MaxPooling
-  -> Conv2D(256, 3x3) + ReLU + BN + MaxPooling
-  -> GlobalAvgPooling + Dense(256) + Dropout(0.5)
-  -> Dense(N_clases) + Softmax
-```
+CNN diseñada a medida, con ~200 K parámetros, optimizada para el tamaño del dataset:
 
-### 4.2 MobileNetV2 + Transfer Learning
-
-- Backbone: MobileNetV2 preentrenada en ImageNet
-- Fase 1: backbone congelado, cabeza personalizada (GAP + Dense 128 + Dropout 0.3)
-- Fase 2: fine-tuning ultimas 30 capas, LR 1e-5
-
-### 4.3 ResNet50 + Transfer Learning
-
-- Backbone: ResNet50 preentrenada en ImageNet
-- Fase 1: backbone congelado, cabeza personalizada
-- Fase 2: fine-tuning desde conv4_x, LR 1e-5
-
----
-
-## 5. Metricas de Evaluacion
-
-| Metrica | Descripcion |
+| Capa | Detalle |
 |---|---|
-| **Accuracy** | Porcentaje de predicciones correctas |
-| **Loss** | Categorical Cross-Entropy |
-| **Precision (macro)** | Promedio de precision por clase |
-| **Recall (macro)** | Promedio de sensibilidad por clase |
-| **F1-Score (macro)** | Media armonica de precision y recall |
-| **AUC-ROC (OvR)** | Capacidad discriminativa por clase |
-| **Matriz de Confusion** | Analisis visual de errores |
+| Conv1 | 3 → 16 canales, kernel 5×5, padding 2, BatchNorm, LeakyReLU(0.1) |
+| Conv2 | 16 → 32 canales, kernel 5×5, padding 2, BatchNorm, LeakyReLU(0.1), MaxPool 2×2 |
+| FC | 32 × 112 × 112 → 10, Dropout(0.2), BatchNorm, LeakyReLU(0.01) |
+
+**Configuración de entrenamiento:**
+
+| Hiperparámetro | Valor |
+|---|---|
+| Optimizador | Adam (lr = 0.001) |
+| Función de pérdida | CrossEntropyLoss |
+| Scheduler | ReduceLROnPlateau (factor=0.1, patience=2) |
+| Épocas máximas | 30 |
+| Early stopping | Paciencia = 5 |
+| Batch size | 64 |
+
+**¿Por qué SimpleCNN y no ResNet/EfficientNet?**
+
+| Modelo | Parámetros | Accuracy | Inferencia (CPU) |
+|---|---|---|---|
+| **SimpleCNN** | ~200 K | **98.67 %** | ~50 ms |
+| ResNet-18 | ~11 M | 99.2 %* | ~200 ms |
+| EfficientNet-B0 | ~5.3 M | 99.0 %* | ~180 ms |
+
+*Valores estimados con transfer learning. Con solo 1 350 imágenes de entrenamiento, una red profunda sería propensa al sobreajuste. SimpleCNN ofrece el mejor balance velocidad/precisión y es compatible nativamente con Grad-CAM sobre su última capa Conv2d (mapas 32 × 112 × 112).
 
 ---
 
-## 6. Ajuste de Hiperparametros
+## Resultados
 
-**Fase 1 - Busqueda manual (baseline):**
-- Learning rate: {1e-3, 1e-4, 1e-5}
-- Batch size: {16, 32}
-- Early Stopping (patience=10)
+### Métricas globales (75 imágenes de prueba)
 
-**Fase 2 - Busqueda sistematica (opcional con KerasTuner):**
-- Optimizador: Adam vs SGD + momentum
-- Dropout: {0.2, 0.3, 0.5}
-- Neuronas densa: {64, 128, 256}
+| Métrica | Valor |
+|---|---|
+| **Exactitud (Accuracy)** | **98.67 %** |
+| Precisión (macro) | 0.99 |
+| Recall (macro) | 0.97 |
+| F1-score (macro) | 0.98 |
 
-**Regularizacion:**
-- Early Stopping (val_loss)
-- ReduceLROnPlateau (factor 0.5, patience 5)
-- L2 Weight Decay
+### Reporte por especie
+
+| Clase | Precisión | Recall | F1 | N |
+|---|---|---|---|---|
+| Astrolebpus | 1.00 | 1.00 | 1.00 | 10 |
+| Black Sea Sprat | 1.00 | 1.00 | 1.00 | 6 |
+| Gilt-Head Bream | 0.86 | 1.00 | 0.92 | 6 |
+| Hourse Mackerel | 1.00 | 1.00 | 1.00 | 5 |
+| Red Mullet | 1.00 | 1.00 | 1.00 | 12 |
+| Red Sea Bream | 1.00 | 1.00 | 1.00 | 7 |
+| Sea Bass | 1.00 | 0.75 | 0.86 | 4 |
+| Shrimp | 1.00 | 1.00 | 1.00 | 5 |
+| Striped Red Mullet | 1.00 | 1.00 | 1.00 | 11 |
+| Trout | 1.00 | 1.00 | 1.00 | 9 |
+
+### Análisis de errores
+
+Los errores se concentran en **Gilt-Head Bream** (precisión 0.86) y **Sea Bass** (recall 0.75). Ambas especies comparten cuerpo ovalado y comprimido lateralmente. Posibles mejoras: aumento de datos específico para este par, o añadir características morfológicas más finas.
+
+Los mapas Grad-CAM confirman que el modelo se enfoca en regiones biológicamente relevantes: **contorno del cuerpo, cabeza y aletas**, lo que acerca el comportamiento de la red al razonamiento de un especialista humano.
 
 ---
 
-## 7. Estructura del Proyecto
+## Estructura del Repositorio
 
 ```
 FishNet/
-├── README.md                   # Informe tecnico
-├── requirements.txt            # Dependencias
-├── generate_notebook.py        # Generador del notebook
-├── data/                       # Datos del dataset
-│   ├── raw/                    # Dataset original
-│   └── processed/              # Datos preprocesados
-├── notebooks/
-│   ├── fishnet_notebook.ipynb  # Notebook Jupyter principal
-│   └── fishnet_pipeline.py     # Pipeline completo (modulo Python)
-├── models/                     # Modelos entrenados (.pth)
-└── cache/                      # Cache de KerasTuner
+├── data/
+│   └── mini_dataset/          # Dataset por clase (ver instrucciones de descarga)
+│       ├── Astrolebpus/
+│       ├── Black Sea Sprat/
+│       └── ...
+├── pipeline/
+│   ├── adquisicion.py         # Etapa 1: carga de imagen
+│   ├── preprocesamiento.py    # Etapa 2: transformaciones
+│   ├── extraccion_caracteristicas.py  # Etapa 3: Grad-CAM
+│   ├── clasificacion.py       # Etapa 4: inferencia SimpleCNN
+│   └── postprocesamiento.py   # Etapa 5: visualización overlay
+├── gui/
+│   └── app.py                 # Interfaz gráfica Tkinter
+├── models/
+│   └── fish_classification_model.pt  # Pesos entrenados
+├── test1.ipynb                # Notebook completo reproducible
+├── informe.pdf                # Documento resumen del proyecto
+├── requirements.txt           # Dependencias
+├── .gitignore
+└── README.md
 ```
 
 ---
 
-## 8. Instrucciones de Uso
+## Instalación y Uso
 
-### Instalacion
+### 1. Clonar el repositorio
 
 ```bash
+git clone https://github.com/vc-2026-i/proyecto-2x1.git
+cd proyecto-2x1
+```
+
+### 2. Crear el entorno y instalar dependencias
+
+```bash
+conda create -n vision python=3.9
+conda activate vision
 pip install -r requirements.txt
 ```
 
-### Descargar Dataset
+### 3. Descargar el dataset
 
-```bash
-# Opcion 1: Kaggle API
-kaggle datasets download sripaadsrinivasan/a-large-scale-fish-dataset
-# Extraer en data/raw/fish_dataset/
+El dataset `mini_dataset` está disponible en el repositorio. Si no está incluido por tamaño, descárgalo desde:
 
-# Opcion 2: Manual
-# Descargar de Kaggle y extraer en la ruta indicada
+```
+https://github.com/vc-2026-i/proyecto-2x1/tree/main
 ```
 
-### Ejecutar Pipeline
+Colócalo en `data/mini_dataset/` con subdirectorios por clase.
+
+### 4. Ejecutar el notebook (entrenamiento completo)
 
 ```bash
-# Opcion A: Notebook (recomendado)
-jupyter notebook notebooks/fishnet_notebook.ipynb
-
-# Opcion B: Script directo
-python notebooks/fishnet_pipeline.py
+jupyter notebook test1.ipynb
 ```
 
-### Resultados
+El notebook cubre en orden: carga de datos → preprocesamiento → definición del modelo → entrenamiento con early stopping → evaluación (accuracy, classification report, matriz de confusión, curvas ROC) → visualización Grad-CAM.
 
-Los modelos entrenados se guardan en `models/`:
-- `cnn_baseline_final.pth`
-- `mobilenetv2_final.pth`
-- `resnet50_final.pth`
+### 5. Ejecutar la interfaz gráfica
 
-Figuras comparativas y curvas de aprendizaje se generan automaticamente.
-
----
-
-## 9. Interpretabilidad (Grad-CAM)
-
-Grad-CAM genera mapas de calor que resaltan las regiones de la imagen mas relevantes
-para la prediccion. Esto permite:
-
-- Verificar que el modelo se enfoca en caracteristicas biologicas (aletas, patrones corporales)
-- Identificar posibles sesgos (fondo, iluminacion)
-- Generar confianza en las predicciones (XAI - Explainable AI)
+```bash
+python gui/app.py
+```
 
 ---
 
-## 10. Resultados Esperados
+## Interfaz Gráfica
 
-| Modelo | Accuracy (esperado) | Parametros | Framework |
-|---|---|---|---|
-| CNN Baseline | ~75-85% | ~1.5M | PyTorch |
-| MobileNetV2 | ~88-94% | ~3.5M | PyTorch |
-| ResNet50 | ~92-97% | ~25M | PyTorch |
+La GUI en **Tkinter** permite a usuarios sin formación técnica operar el sistema completo:
 
-*Resultados preliminares; dependen del dataset y configuracion especifica.*
+| Componente | Función |
+|---|---|
+| Panel superior | Cargar imagen desde archivo, seleccionar imagen aleatoria del dataset, ejecutar pipeline |
+| Panel central | Vista previa de la imagen cargada |
+| Panel de resultados | Clase predicha y confianza (verde > 50 %, rojo ≤ 50 %) |
+| Botón Grad-CAM | Abre ventana con tres paneles: imagen original, heatmap, superposición |
+| Botón Probabilidades | Tabla completa de probabilidades por clase |
 
----
-
-## 11. Trabajo Futuro
-
-- Deteccion de multiples peces por imagen (YOLOv8, Faster R-CNN)
-- Clasificacion en tiempo real desde video
-- Aplicacion web/movil para uso en campo
-- Arquitecturas Vision Transformer (ViT)
-- Dataset con mas especies y condiciones variadas
+**Flujo de uso típico:**
+1. Cargar imagen → 2. Ejecutar pipeline → 3. Ver resultado → 4. Inspeccionar Grad-CAM
 
 ---
 
-## 12. Referencias
+## Grad-CAM: Explicabilidad Visual
 
-1. Krizhevsky, A., Sutskever, I., & Hinton, G. E. (2012). ImageNet Classification with Deep Convolutional Neural Networks.
-2. Sandler, M., et al. (2018). MobileNetV2: Inverted Residuals and Linear Bottlenecks.
-3. He, K., et al. (2016). Deep Residual Learning for Image Recognition.
-4. Selvaraju, R. R., et al. (2017). Grad-CAM: Visual Explanations from Deep Networks via Gradient-based Localization.
-5. A Large Scale Fish Dataset - Kaggle: https://www.kaggle.com/datasets/sripaadsrinivasan/a-large-scale-fish-dataset
+Grad-CAM (*Gradient-weighted Class Activation Mapping*, Selvaraju et al., ICCV 2017) genera un mapa de calor que indica qué píxeles de la imagen fueron más relevantes para la predicción. En FishNet, el modelo consistentemente destaca:
+
+- **Contorno del cuerpo** — forma general de la especie
+- **Cabeza** — rasgos faciales y dentición
+- **Aletas** — morfología característica por especie
+
+Esto valida que el modelo aprende representaciones biológicamente significativas en lugar de artefactos del fondo.
 
 ---
 
-*Proyecto de Vision por Computadora - 2026*
+## Dependencias
+
+| Biblioteca | Versión mínima |
+|---|---|
+| PyTorch | ≥ 2.0.0 |
+| TorchVision | ≥ 0.15.0 |
+| NumPy | ≥ 1.24.0 |
+| Matplotlib | ≥ 3.7.0 |
+| scikit-learn | ≥ 1.2.0 |
+| Pillow | ≥ 9.0.0 |
+| pandas | ≥ 1.5.0 |
+| seaborn | ≥ 0.12.0 |
+| albumentations | ≥ 1.3.0 |
+
+Ver `requirements.txt` para la lista completa con versiones exactas.
+
+**Entorno de desarrollo:**
+- SO: Windows 11 / Ubuntu 22.04
+- Python 3.9
+- GPU: NVIDIA RTX 3060 Ti, CUDA 13.1 (la inferencia también corre en CPU)
+
+---
+
+## Referencias
+
+1. FishNet, "Fish classification dataset and baseline models," 2026. [GitHub](https://github.com/vc-2026-i/proyecto-2x1/tree/main)
+2. R. R. Selvaraju et al., "Grad-CAM: Visual explanations from deep networks via gradient-based localization," *Proc. IEEE ICCV*, 2017, pp. 618–626.
+3. I. Goodfellow, Y. Bengio y A. Courville, *Deep Learning*. MIT Press, 2016.
+
+---
+
+## Autores
+
+**Luis Daniel Reyes Rodríguez**  
+Ingeniería Mecatrónica — Universidad Nacional de Colombia Sede La Paz  
+lureyesr@unal.edu.co
+
+**Jean Carlos Mejia Jimenez**  
+Ingeniería Mecatrónica — Universidad Nacional de Colombia Sede La Paz  
+jemejiaj@unal.edu.co
+---
+
+*Proyecto final — Asignatura: Redes Neuronales y Aprendizaje Profundo*  
+*Universidad Nacional de Colombia Sede La Paz, 2026*
